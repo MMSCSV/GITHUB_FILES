@@ -1,0 +1,122 @@
+// Jenkinsfile Declarative syntax using Jenkins global shared libraries
+// Instructions:
+//  * Rename to Jenkinsfile, case-sensitive filename
+//  * Jenkinsfile template [instructions, see Step 5](https://github.com/bd-devops/template-build#template-instructions)
+
+// Start of Jenkinsfile:
+//===================================================================================================
+
+// loads Devops build pipeline library
+@Library('jenkins-common')
+Devops = new io.bddevops.devops.Devops(this)
+
+// set the target version
+targetVersion = "1.0.0"
+
+pipeline
+{
+  agent {
+    node {
+      label 'node-name'
+    }
+  }
+  options { 
+    // skip the default checkout for declarative pipelines. 
+    // we want to checkout using jenkins-common to setup SCM properties for GitHub/Artifactory
+    skipDefaultCheckout()
+  }
+  stages {
+    stage('Pre-Build') {
+      steps {
+        script {
+          // checkout source, set build version
+          Devops.preBuild(targetVersion)
+        }
+      }
+    }
+
+    stage('Build') {
+      steps {
+        script {
+          // EXAMPLE: dotnet build usage
+          def slnFiles = ["path/to/solution/file1.sln,path/to/solution/file2.sln"]
+          Devops.Dotnet.build(slnFiles)
+
+          // EXAMPLE:  msbuild usage
+          def slnFiles = ["path/to/solution/file1.sln,path/to/solution/file2.sln"]
+          Devops.Msbuild.execute(slnFiles)
+        }
+      }
+      // post step for stage
+      post {
+        failure {
+          // EXAMPLE: if stage fails, run script
+          script {
+            println "${env.STAGE_NAME} failed"
+          }
+        }
+      }
+    }
+
+    stage('Test') {
+      steps {
+        script {
+          // EXAMPLE: Execute unit tests with mstest.exe, 
+          //   default parameter: '**/bin/Release/*.Test*.dll'
+          Devops.Test.mstest()
+
+          // EXAMPLE: Execute unit tests with nunit3-console.exe, 
+          //   default parameter: '**/bin/Release/*.Test*.dll'
+          Devops.Test.nunit()
+          
+          // EXAMPLE: Execute unit tests with vstest.exe, 
+          //   default parameter: '**/bin/Release/*.Test*.dll'
+          Devops.Test.vstest()
+        }
+      }
+    }
+
+    stage('Pack') {
+      steps {
+        script {
+          // EXAMPLE: create nupkgs using a nuspec-list.txt with dotnet and nuget, 
+          //   default parameter: 'src/nuspec-list.txt'
+          Devops.Pack.nuspecList()
+          
+          // EXAMPLE: create chocolately packages using devops commonpack process
+          //   default parameter: "pack/**/*.json"
+          Devops.Pack.choco()
+        }
+      }
+    }
+
+    stage('Post-Build') {
+      steps {
+        script {
+          // Push build artifacts to Artifactory, cleans the workspace
+          Devops.postBuild()
+        }
+      }
+    }
+
+  }
+  // post step for pipeline
+  post {
+    always {
+      // EXAMPLE: always clean workspace
+      cleanWs()
+    }
+    success {
+      // EXAMPLE: on success run script
+		  script{
+        println "on success"
+      }
+    }
+    failure {
+      // EXAMPLE: on failure run script
+		  script{
+        println "on failure"
+      }
+    }
+  }
+}

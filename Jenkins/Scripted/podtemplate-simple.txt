@@ -1,0 +1,60 @@
+// Jenkinsfile example for use with kubernetes environment
+// Instructions:
+//  * Rename to Jenkinsfile, case-sensitive filename
+//  * Jenkinsfile template [instructions, see Step 5](https://github.com/bd-devops/template-build#template-instructions)
+
+// Start of Jenkinsfile:
+//===================================================================================================
+
+// loads Devops build pipeline library
+@Library('jenkins-common')_
+Devops = new io.bddevops.devops.Devops(this)
+
+// docker container, used for executing docker commands. Reference name: docker
+Devops.PodTemplate.containerDocker() {
+
+  // Example of how to call a container from a registry
+  Devops.PodTemplate.callContainer([name:"dotnet", image: "bd-docker.docker-reg.bddevops.io/dotnet/sdk:5.0"]) {
+
+    // additional containers can be nested
+    // Devops.PodTemplate.callContainer([name:"containerName", image: "containerImage"]) {
+
+    // set the target version
+    def targetVersion = "0.1"
+
+    // defaults to POD_LABEL, do not change
+    node(POD_LABEL) {
+
+      stage('Pre-Build') {
+        // checkout source, set build version
+        Devops.preBuild(targetVersion)
+      }
+
+      // executes the following stage(s) in the 'dotnet' container
+      container('dotnet') {
+        stage('Build') {
+          Devops.Dotnet.build("path/to/project")
+        }
+
+        stage('Publish') {    
+          Devops.Dotnet.publishToDir("path/to/project")
+        }
+      }
+
+      // executes the following stage(s) in the 'docker' container
+      container('docker') {
+        // TODO: Allow passing build args or use env variables
+        Devops.Docker.pipelineWithRegistry {
+          dockerFile = '{"logistics-greenfield-service":"src/Dockerfile"}'
+          buildOptions = "--build-arg PUBLISH_FOLDER=BD.Vanguard.Logistics.Greenfield.Api/publish"
+        }
+      }
+
+      stage ('Post-Build') {
+        Devops.postBuild()
+      }
+    }
+    
+  }
+}
+

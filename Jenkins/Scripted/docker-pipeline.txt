@@ -1,0 +1,34 @@
+// Jenkinsfile Scripted syntax using Jenkins global shared libraries
+// This file uses a pre-defined build process where pre-build and post-build are executed in the background.
+// Building a Docker container
+// Instructions:
+//  * Rename to Jenkinsfile, case-sensitive filename
+//  * Jenkinsfile template [instructions, see Step 5](https://github.com/bd-devops/template-build#template-instructions)
+
+// Start of Jenkinsfile:
+//===================================================================================================
+
+// loads Devops build pipeline library
+@Library('jenkins-common')_
+Devops = new io.bddevops.devops.Devops(this)
+
+// set the target version
+targetVersion = "1.0"
+
+node('node-name') {
+
+  // use Devops Pipeline wrapper
+  Devops.pipeline(targetVersion) {
+
+    // use Devops Docker library pipeline wrapper
+    Devops.Docker.pipeline {
+      
+      // EXAMPLE: specify JSON object of docker container name and path to Dockerfile
+      dockerFile = '{"name-of-docker-container":"path\\to\\Dockerfile"}'
+      
+    }
+    
+  }
+  
+}
+

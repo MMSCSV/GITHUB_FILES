@@ -1,0 +1,44 @@
+// Jenkinsfile Scripted syntax using Jenkins global shared libraries
+// This file uses a pre-defined build process where pre-defined stages are executed based on the pipeline configuration.
+//   - stage execution: Pre-build, Build, Test, Pack, Post-Build
+// Instructions:
+//  * Rename to Jenkinsfile, case-sensitive filename
+//  * Jenkinsfile template [instructions, see Step 5](https://github.com/bd-devops/template-build#template-instructions)
+
+// Start of Jenkinsfile:
+//===================================================================================================
+
+// loads Devops build pipeline library
+@Library('jenkins-common')
+Devops = new io.bddevops.devops.Devops(this)
+
+node('node-name') {
+  Devops.pipelineSimple() {
+    // set the target version
+    targetVersion = "1.0.0"
+
+    // EXAMPLE: dotnet build usage
+    dotnet = "path\\to\\solution.sln"
+
+    // EXAMPLE:  msbuild usage
+    msbuild = "path\\to\\solution1.sln,path\\to\\solution2.sln"
+
+    // execute dotnet test using a set of csprojs
+    dotnettest = "**/*.Test*.csproj"
+    
+    // EXAMPLE: Execute unit tests with mstest.exe
+    mstest = "**/bin/Release/*.Test*.dll"
+
+    // EXAMPLE: Execute unit tests with nunit3-console.exe
+    nunit = "**/bin/Release/*.Test*.dll"
+
+    // EXAMPLE: Execute unit tests with vstest.exe
+    vstest = "**/bin/Release/*.Test*.dll"
+
+    // EXAMPLE: create nupkgs using a nuspec-list.txt with dotnet and nuget, 
+    nuspecListFile = "src/nuspec-list.txt"
+
+    // EXAMPLE: create chocolately packages using devops commonpack process
+    chocoPackFile = "pack/**/*.json"
+  }
+}

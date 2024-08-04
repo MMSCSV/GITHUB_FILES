@@ -1,0 +1,80 @@
+// Jenkinsfile Scripted syntax using Jenkins global shared libraries
+// This file uses a pre-defined build process where pre-build and post-build are executed in the background.
+// Building a Docker container using Kubernetes with Rancher
+// Instructions:
+//  * Rename to Jenkinsfile, case-sensitive filename
+//  * Jenkinsfile template [instructions, see Step 5](https://github.com/bd-devops/template-build#template-instructions)
+
+// Start of Jenkinsfile:
+//===================================================================================================
+
+// loads Devops build pipeline library
+@Library('jenkins-common')_
+Devops = new io.bddevops.devops.Devops(this)
+
+podTemplate(cloud: 'Rancher', yaml: """
+# For yaml podTemplate support see: https://github.com/jenkinsci/kubernetes-plugin#pipeline-support
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    jenkins/kube-default: true
+    app: jenkins
+    component: agent
+spec:
+  containers:
+  - name: golang
+    image: golang:1.13
+    command: ['cat']
+    tty: true
+    env:
+      - name: GOPRIVATE
+        value: github.com/bd-devops/bddevops
+  - name: docker
+    image: docker
+    command: ['cat']
+    tty: true
+    volumeMounts:
+      - name: dockersock
+        mountPath: /var/run/docker.sock
+  volumes:
+  - name: dockersock
+    hostPath:
+      path: /var/run/docker.sock
+  nodeSelector:
+    beta.kubernetes.io/os: linux
+  tolerations:
+  - key: cattle.io/os
+    operator: Equal
+    value: linux
+    effect: NoSchedule
+"""
+)
+{
+  node(POD_LABEL) {
+    // set the target version
+    targetVersion = "1.0"
+
+    stage('Pre-Build') {
+      // checkout source, set build version
+      Devops.preBuild(targetVersion)
+    }
+
+    // specify container to use
+    container('docker') {
+
+      // use Devops Docker library buildDockerWithRegistry wrapper
+      Devops.Docker.pipelineWithRegistry {
+
+        // EXAMPLE: specify JSON object of docker container name and path to Dockerfile
+        dockerFile = '{"name-of-docker-container":"path\\to\\Dockerfile"}'
+
+      }
+    }
+
+    stage ('Post-Build') {
+      // Push build artifacts to Artifactory, cleans the workspace
+      Devops.postBuild()
+    }
+  }
+}
