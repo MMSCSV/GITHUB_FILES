@@ -1,0 +1,11 @@
+plugins {
+  id "org.sonarqube" version "4.4.1.3373"
+}
+
+sonar {
+  properties {
+    property "sonar.projectKey", "MMSCSV_GITHUB_FILES"
+    property "sonar.organization", "mmscsv"
+    property "sonar.host.url", "https://sonarcloud.io"
+  }
+}
